@@ -1,0 +1,75 @@
+library("animation")
+library("ggplot2")
+library("reshape")
+
+package(animation, ggplot2, reshape)
+# x = log(xx[,1:13])
+
+xx = read.csv("data1.csv", row.names = 1)
+xx = xx[1:80,1:14];  
+x = round(xx[,1:13], digits = 2)
+
+
+
+mahal <- function(x, index) {
+    if (!is.matrix(x)) stop("x is not a matrix")
+    xbar <- apply(x[index,], 2, mean)
+    S <- var(x[index,])
+    S <- solve(S)
+    xcent <- t(t(x) - xbar)
+    apply(xcent, 1, function(x) x %*% S %*% x)          
+}
+
+    if (!is.matrix(x)) x <- as.matrix(x)
+    rn <- rownames(x)
+    if (is.null(rn)) rn <- 1:nrow(x)
+    n <- length(x[,1])
+    p <- length(x[1,])
+    s <- 1:n
+    ind <- matrix(0, n-p, n)
+    ind1 <- 0
+    thresh <- qchisq((n-0.5)/n,p)
+
+ index<-1:(p+1)
+    for(i in (p+1):n) {
+        ind1<-ind1+1
+        if(i==(p+1)) D<-mahal(x,index)
+        index<-order(D)
+        index1<-sort(index[1:i])
+        D<-mahal(x,index1) 
+        index2<-s[D>thresh]
+        ind[ind1,index2]<-ind[ind1,index2]+1
+    }
+
+
+    y<-rep(1:(n-p),rep(n,(n-p)))
+    x<-rep(1:n,(n-p))
+
+par(mai = par("mai") * c(1, 1, 2, 1))
+ residuals <- c(" ", "*")[as.vector(t(ind[(n-p):1,])) + 1]
+
+oopt = ani.options(interval = 0.05)
+labs =paste(row.names(xx))
+resid <- data.frame(residuals, x, y, labs)
+
+FUN <- function() {
+lapply(1:nrow(resid), function(i) {
+
+
+p = print(ggplot(resid[1:i,, drop=FALSE], aes(x = x, y = y)) + 
+ geom_point(aes(alpha = residuals))
+  +  ylab("Number of observations used for estimation") + xlab("Observations") + 
+theme(text = element_text(size=12), axis.text.x = element_text(angle=90, hjust=1)) +
+             	  xlim(c(min(resid$x), max(resid$x))) + 
+            ylim(c(min(resid$y), max(resid$y)))) 
+        animation::ani.pause(0.01) 
+    })
+}
+
+
+FUN()
+
+
+saveLatex(FUN(), autoplay = TRUE, loop = FALSE, latex.filename = "test.tex",
+    caption = "A simulated forward searach algorithm", outdir = "images/animate", ani.type = "pdf",
+    ani.dev = "pdf", ani.width = 5, ani.height = 5.5, interval = 0.1)
